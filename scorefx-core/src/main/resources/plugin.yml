@@ -1,0 +1,20 @@
+name: ScoreFX
+version: ${project.version}
+main: com.dripps.scorefx.ScoreFXPlugin
+api-version: '1.21'
+author: Dripps
+description: High-performance, developer-first Scoreboard API for Paper servers
+website: https://github.com/dripps/scorefx
+
+# Soft dependency on PlaceholderAPI
+softdepend:
+  - PlaceholderAPI
+
+# Load priority - STARTUP ensures we're available early for other plugins
+load: STARTUP
+
+# Commands (none for now - this is an API plugin)
+commands: {}
+
+# Permissions (none for now - this is an API plugin)
+permissions: {}
