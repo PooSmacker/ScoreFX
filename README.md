@@ -316,7 +316,7 @@ Artifacts:
 
 ## License
 
-Provided as-is for educational and development purposes.
+MIT License
 
 ## Credits
 
