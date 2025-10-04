@@ -36,24 +36,39 @@ No configuration files are required; everything is controlled through the API.
 
 ---
 
-## Add to Your Plugin
+### Add to Your Plugin (JitPack)
 
-### Build dependencies
-
-Maven
+Maven (pom.xml)
+```xml
+<repository>
+  <id>jitpack.io</id>
+  <url>https://jitpack.io</url>
+</repository>
+```
 ```xml
 <dependency>
-  <groupId>com.dripps.scorefx</groupId>
+  <groupId>com.github.PooSmacker.ScoreFX</groupId>
   <artifactId>scorefx-api</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <version>v1.0</version>
   <scope>provided</scope>
 </dependency>
 ```
 
-Gradle
+Gradle (settings.gradle)
+```gradle
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+    }
+}
+```
+
+Gradle (build.gradle)
 ```gradle
 dependencies {
-    compileOnly 'com.dripps.scorefx:scorefx-api:1.0-SNAPSHOT'
+    compileOnly 'com.github.PooSmacker.ScoreFX:scorefx-api:v1.0'
 }
 ```
 
