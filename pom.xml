@@ -12,8 +12,6 @@
     <modules>
         <module>scorefx-api</module>
         <module>scorefx-core</module>
-        <module>scorefx-api</module>
-        <module>scorefx-core</module>
     </modules>
 
     <properties>

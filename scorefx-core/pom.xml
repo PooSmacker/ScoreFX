@@ -39,6 +39,13 @@
         </dependency>
 
         <dependency>
+            <groupId>org.jetbrains</groupId>
+            <artifactId>annotations</artifactId>
+            <version>24.1.0</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <dependency>
             <groupId>me.clip</groupId>
             <artifactId>placeholderapi</artifactId>
             <version>2.11.6</version>
@@ -69,16 +76,22 @@
                 </executions>
                 <configuration>
                     <relocations>
-                        <!--
-                        If I add a library like Gson or Guava, you would relocate it here
-                        to prevent conflicts with other plugins on the server.
-                        Example:
+                        <!-- Relocate JetBrains annotations to prevent conflicts -->
                         <relocation>
-                            <pattern>com.google.gson</pattern>
-                            <shadedPattern>com.yourname.scorefx.libs.gson</shadedPattern>
+                            <pattern>org.jetbrains.annotations</pattern>
+                            <shadedPattern>com.dripps.scorefx.libs.annotations</shadedPattern>
                         </relocation>
-                        -->
                     </relocations>
+                    <filters>
+                        <filter>
+                            <artifact>*:*</artifact>
+                            <excludes>
+                                <exclude>META-INF/*.SF</exclude>
+                                <exclude>META-INF/*.DSA</exclude>
+                                <exclude>META-INF/*.RSA</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
                 </configuration>
             </plugin>
         </plugins>
