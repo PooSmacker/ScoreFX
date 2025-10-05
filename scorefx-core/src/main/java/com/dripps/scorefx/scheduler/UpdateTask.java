@@ -12,6 +12,11 @@ import java.util.UUID;
  * Tasks are ordered by their scheduled execution tick to enable efficient priority queue processing.
  * </p>
  * <p>
+ * As of version 1.1.0, the {@code textObject} field can hold either a {@link String} (for legacy
+ * placeholder-based updates) or any other object type (typically unused for animations). This enables
+ * the Adventure-First architecture while maintaining backward compatibility with PlaceholderAPI.
+ * </p>
+ * <p>
  * This record implements {@link Comparable} to allow natural ordering in the priority queue,
  * with tasks scheduled for earlier ticks having higher priority.
  * </p>
@@ -20,16 +25,17 @@ import java.util.UUID;
  * @param boardId the UUID of the player who owns the board
  * @param executionTick the server tick at which this task should execute
  * @param row the row number for line updates (1-15), or -1 for title updates
- * @param text the text to display (may contain placeholders)
+ * @param textObject the text object to process - String for placeholder updates, or empty string for animations
  * @param animationId optional animation identifier for animated content, or null
  * @param intervalTicks the interval in ticks before this task should repeat (0 for one-time tasks)
+ * @since 1.0 (textObject changed from String text in 1.1.0)
  */
 public record UpdateTask(
     @NotNull TaskType type,
     @NotNull UUID boardId,
     long executionTick,
     int row,
-    @NotNull String text,
+    @NotNull Object textObject,
     String animationId,
     int intervalTicks
 ) implements Comparable<UpdateTask> {
@@ -44,8 +50,8 @@ public record UpdateTask(
         if (boardId == null) {
             throw new IllegalArgumentException("Board ID cannot be null");
         }
-        if (text == null) {
-            text = "";
+        if (textObject == null) {
+            textObject = "";
         }
         if (intervalTicks < 0) {
             throw new IllegalArgumentException("Interval ticks cannot be negative");
@@ -89,7 +95,7 @@ public record UpdateTask(
             boardId,
             currentTick + intervalTicks,
             row,
-            text,
+            textObject,
             animationId,
             intervalTicks
         );

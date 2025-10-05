@@ -3,7 +3,7 @@
   <parent>
     <artifactId>scorefx-parent</artifactId>
     <groupId>com.dripps.scorefx</groupId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.1.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>scorefx-core</artifactId>
@@ -31,6 +31,10 @@
             <relocation>
               <pattern>org.jetbrains.annotations</pattern>
               <shadedPattern>com.dripps.scorefx.libs.annotations</shadedPattern>
+            </relocation>
+            <relocation>
+              <pattern>net.kyori.adventure.text.serializer.legacy</pattern>
+              <shadedPattern>com.dripps.scorefx.libs.adventure</shadedPattern>
             </relocation>
           </relocations>
           <filters>

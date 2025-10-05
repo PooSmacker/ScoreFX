@@ -2,6 +2,8 @@ package com.dripps.scorefx.scheduler;
 
 import com.dripps.scorefx.board.TeamBoardImpl;
 import com.dripps.scorefx.hook.PAPIHook;
+import com.dripps.scorefx.util.LegacySupport;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
@@ -173,11 +175,18 @@ public final class Heartbeat {
      * Executes a single update task.
      * <p>
      * This method retrieves the board from the active boards map and performs the
-     * appropriate update operation based on the task type. PlaceholderAPI placeholders
-     * are replaced before updating the board.
+     * appropriate update operation based on the task type. As of version 1.1.0, this
+     * method is Adventure-First: all text is converted to Components before being
+     * passed to the board.
+     * </p>
+     * <p>
+     * For String-based tasks (textObject is String), PlaceholderAPI replacement is
+     * applied before conversion to Components. For Component-based tasks and animations,
+     * PlaceholderAPI is not supported.
      * </p>
      *
      * @param task the task to execute
+     * @since 1.0 (updated in 1.1.0 for Adventure-First architecture)
      */
     private void executeTask(@NotNull UpdateTask task) {
         TeamBoardImpl board = activeBoardsMap.get(task.boardId());
@@ -197,33 +206,55 @@ public final class Heartbeat {
         try {
             switch (task.type()) {
                 case LINE_UPDATE -> {
-                    // Replace placeholders and update the line
-                    String processedText = papiHook.setPlaceholders(player, task.text());
-                    board.updateLineDirect(task.row(), processedText);
+                    // Process text object - only Strings support PlaceholderAPI
+                    Component finalComponent;
+                    if (task.textObject() instanceof String textString) {
+                        // Replace placeholders in the String
+                        String processedText = papiHook.setPlaceholders(player, textString);
+                        // Convert to Component (Adventure-First)
+                        finalComponent = LegacySupport.toComponent(processedText);
+                    } else {
+                        // Non-String objects are not supported for LINE_UPDATE
+                        logger.warning("LINE_UPDATE task received non-String textObject for board " + task.boardId());
+                        return;
+                    }
+                    
+                    // Update the line with the Component
+                    board.updateLineDirect(task.row(), finalComponent);
                 }
                 case LINE_ANIMATION -> {
-                    // Advance the animation to the next frame
+                    // Advance the animation to the next frame (returns Component)
                     var animation = board.getAnimation(task.row());
                     if (animation != null) {
-                        String nextFrame = animation.nextFrame();
-                        // Replace placeholders in the frame
-                        String processedFrame = papiHook.setPlaceholders(player, nextFrame);
-                        board.updateLineDirect(task.row(), processedFrame);
+                        Component nextFrame = animation.nextFrame();
+                        // Note: PlaceholderAPI is not supported for Component-based animations
+                        board.updateLineDirect(task.row(), nextFrame);
                     }
                 }
                 case TITLE_UPDATE -> {
-                    // Replace placeholders and update the title
-                    String processedText = papiHook.setPlaceholders(player, task.text());
-                    board.updateTitleDirect(processedText);
+                    // Process text object - only Strings support PlaceholderAPI
+                    Component finalComponent;
+                    if (task.textObject() instanceof String textString) {
+                        // Replace placeholders in the String
+                        String processedText = papiHook.setPlaceholders(player, textString);
+                        // Convert to Component (Adventure-First)
+                        finalComponent = LegacySupport.toComponent(processedText);
+                    } else {
+                        // Non-String objects are not supported for TITLE_UPDATE
+                        logger.warning("TITLE_UPDATE task received non-String textObject for board " + task.boardId());
+                        return;
+                    }
+                    
+                    // Update the title with the Component
+                    board.updateTitleDirect(finalComponent);
                 }
                 case TITLE_ANIMATION -> {
-                    // Advance the title animation to the next frame
+                    // Advance the title animation to the next frame (returns Component)
                     var animation = board.getAnimation(-1); // -1 is TITLE_ROW
                     if (animation != null) {
-                        String nextFrame = animation.nextFrame();
-                        // Replace placeholders in the frame
-                        String processedFrame = papiHook.setPlaceholders(player, nextFrame);
-                        board.updateTitleDirect(processedFrame);
+                        Component nextFrame = animation.nextFrame();
+                        // Note: PlaceholderAPI is not supported for Component-based animations
+                        board.updateTitleDirect(nextFrame);
                     }
                 }
             }

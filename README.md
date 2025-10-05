@@ -2,9 +2,34 @@
 
 [![Java 21](https://img.shields.io/badge/Java-21-orange.svg)](https://openjdk.java.net/projects/jdk/21/)
 [![Paper 1.21](https://img.shields.io/badge/Paper-1.21.8-blue.svg)](https://papermc.io/)
-[![Version](https://img.shields.io/badge/Version-1.0--SNAPSHOT-green.svg)]()
+[![Version](https://img.shields.io/badge/Version-1.1.0--SNAPSHOT-green.svg)]()
 
 ScoreFX is a high-performance, developer-focused Scoreboard API plugin for Paper 1.21.8. It provides a clean, efficient API for per‑player scoreboards with dynamic updates, animations, and optional PlaceholderAPI support.
+
+## FAQ
+
+- **Do I need PlaceholderAPI?**
+    - No. It's optional. If installed, placeholders in String-based methods will be resolved automatically.
+    - Note: Placeholders only work with String methods, not Component methods.
+    
+- **Should I use Components or Strings in v1.1.0?**
+    - **Components** for static content with RGB colors, gradients, and modern formatting
+    - **Strings** for dynamic content with PlaceholderAPI placeholders
+    - **Both** work perfectly - use what fits your needs!
+    
+- **Will my v1.0 code still work?**
+    - Yes! Full backward compatibility. String methods are deprecated but will never be removed.
+    
+- **How do I use RGB colors?**
+    - With Strings: `&#FF6B35Text`
+    - With Components: `TextColor.fromHexString("#FF6B35")`
+    - With MiniMessage: `<#FF6B35>Text`
+    
+- **How many lines can I use?**
+    - 1–15. Row 1 is bottom, 15 is top.
+    
+- **Do I have to manually clean up?**
+    - No. ScoreFX automatically cleans on player quit and on plugin disable. You can still remove boards yourself if you prefer explicit control.** adds native support for Paper's Adventure Component API, enabling modern text features like RGB colors, gradients, hover/click events, and more—while maintaining full backward compatibility with the String-based API.
 
 - Paper: 1.21.8
 - Java: 21
@@ -15,11 +40,13 @@ ScoreFX is a high-performance, developer-focused Scoreboard API plugin for Paper
 
 ## Why ScoreFX
 
+- **Modern Text Support (v1.1.0+)**: Native Adventure Component API with RGB colors, gradients etc.
+- **Backward Compatible**: Full String-based API support with automatic legacy color conversion
 - Single-tick scheduler: one task drives all boards
 - Priority queue scheduling: O(log n) insertion and due-time processing
 - Flicker-free rendering: team prefix/suffix updates (no score churn)
 - Per-player boards: each player gets an independent board
-- Animations: titles and lines with precise intervals
+- Animations: titles and lines with precise intervals (Components or Strings)
 - PlaceholderAPI: auto-detected, soft dependency
 - Thread-safety rules: clear main-thread enforcement and safe reads
 
@@ -49,7 +76,7 @@ Maven (pom.xml)
 <dependency>
   <groupId>com.github.PooSmacker.ScoreFX</groupId>
   <artifactId>scorefx-api</artifactId>
-  <version>v1.0</version>
+  <version>v1.1.0</version>
   <scope>provided</scope>
 </dependency>
 ```
@@ -68,7 +95,7 @@ dependencyResolutionManagement {
 Gradle (build.gradle)
 ```gradle
 dependencies {
-    compileOnly 'com.github.PooSmacker.ScoreFX:scorefx-api:v1.0'
+    compileOnly 'com.github.PooSmacker.ScoreFX:scorefx-api:v1.1.0'
 }
 ```
 
@@ -121,7 +148,97 @@ public final class YourPlugin extends JavaPlugin {
 
 ---
 
-## Basic Usage
+## Modern API: Using Components (v1.1.0+)
+
+**New in v1.1.0:** ScoreFX now natively supports Paper's Adventure Component API, enabling modern text features like RGB colors, gradients, hover/click events, and more.
+
+### Why Use Components?
+
+- **RGB Colors**: Full 16.7 million color palette with `<#RRGGBB>` syntax
+- **Gradients**: Smooth color transitions with `<gradient:...>` tags
+- **Hover/Click Events**: Interactive text (though only visual content renders on scoreboards)
+- **Modern API**: Adventure is Paper's standard text API
+- **Future-Proof**: All internal processing uses Components
+
+### Basic Component Usage
+
+```java
+import com.dripps.scorefx.api.Board;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
+
+public void showModernBoard(Player player) {
+    Board board = boards().createBoard(player);
+
+    // RGB colors with hex values
+    Component title = Component.text("My Server", TextColor.fromHexString("#FF6B35"))
+        .decorate(TextDecoration.BOLD);
+    board.setTitle(title);
+
+    // Named colors
+    board.setLine(15, Component.text("------------------", NamedTextColor.GRAY));
+    
+    // Complex formatting
+    Component playerLine = Component.text()
+        .append(Component.text("Player: ", NamedTextColor.YELLOW))
+        .append(Component.text(player.getName(), NamedTextColor.WHITE))
+        .build();
+    board.setLine(14, playerLine);
+
+    // Gradient using MiniMessage (requires adventure-text-minimessage)
+    // Component gradient = MiniMessage.miniMessage().deserialize("<gradient:red:blue>Beautiful Gradient</gradient>");
+    // board.setLine(13, gradient);
+}
+```
+
+### Component Animations
+
+```java
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextColor;
+
+// Create animated title with RGB colors
+Animation rgbTitle = animations().fromComponents(
+    java.util.List.of(
+        Component.text("ScoreFX", TextColor.fromHexString("#FF0000")),
+        Component.text("ScoreFX", TextColor.fromHexString("#FF7F00")),
+        Component.text("ScoreFX", TextColor.fromHexString("#FFFF00")),
+        Component.text("ScoreFX", TextColor.fromHexString("#00FF00")),
+        Component.text("ScoreFX", TextColor.fromHexString("#0000FF"))
+    ),
+    10  // 0.5s per frame
+);
+board.setAnimatedTitle(rgbTitle);
+```
+
+### Important: PlaceholderAPI Limitation
+
+⚠️ **PlaceholderAPI only works with String-based methods.** If you need placeholder support, use the legacy String API:
+
+```java
+// ✅ Placeholders work
+board.setLine(11, "&eBalance: &a$%vault_eco_balance%");
+
+// ❌ Placeholders DO NOT work with Components
+Component line = Component.text("Balance: $%vault_eco_balance%");
+board.setLine(11, line);  // Placeholder won't be replaced
+```
+
+**Why?** PlaceholderAPI is a String-based API and doesn't understand Components. To support both RGB colors and placeholders, you would need to:
+1. Resolve placeholders with PlaceholderAPI (String → String)
+2. Parse the result into a Component with MiniMessage or similar
+
+For static content with modern formatting, use Components. For dynamic placeholder-driven content, use Strings.
+
+---
+
+## Legacy API: Using Strings
+
+## Legacy API: Using Strings
+
+**Still fully supported!** All String-based methods remain available and work exactly as before. These methods support `&` color codes, `§` codes, hex colors with `&#RRGGBB`, and PlaceholderAPI placeholders.
 
 Create a board for a player and set content. Rows are 1–15 (1 = bottom, 15 = top).
 
@@ -290,9 +407,34 @@ Bukkit.getScheduler().runTask(plugin, () -> {
 ## PlaceholderAPI
 
 - Works automatically if PlaceholderAPI is installed.
-- All text inputs support `&` and `§` color codes and `%placeholders%`.
+- **String methods only:** Placeholders are only resolved in String-based methods, not Component methods.
+- All String inputs support `&` and `§` color codes, `&#RRGGBB` hex colors, and `%placeholders%`.
 - Placeholders are resolved right before rendering (keeps data fresh).
 - If PlaceholderAPI is not present, text is used as-is.
+
+**Component + Placeholder Workaround:**
+
+If you need both RGB colors and PlaceholderAPI, you must resolve placeholders yourself first. This is because PlaceholderAPI operates on raw strings, while Adventure Components are complex objects that cannot be easily searched for placeholders after they are created:
+
+```java
+// 1. Resolve placeholders
+String resolved = PlaceholderAPI.setPlaceholders(player, "%vault_eco_balance%");
+
+// 2. Build Component with resolved value
+Component line = Component.text()
+    .append(Component.text("Balance: ", NamedTextColor.YELLOW))
+    .append(Component.text("$" + resolved, NamedTextColor.GREEN))
+    .build();
+
+board.setLine(11, line);
+```
+
+Alternatively, use MiniMessage to parse the entire string:
+```java
+String text = PlaceholderAPI.setPlaceholders(player, "Balance: <yellow>$%vault_eco_balance%");
+Component line = MiniMessage.miniMessage().deserialize(text);
+board.setLine(11, line);
+```
 
 ---
 
@@ -305,8 +447,8 @@ mvn clean package
 ```
 
 Artifacts:
-- `scorefx-api/target/scorefx-api-1.0-SNAPSHOT.jar`
-- `scorefx-core/target/scorefx-core-1.0-SNAPSHOT.jar`
+- `scorefx-api/target/scorefx-api-1.1.0-SNAPSHOT.jar`
+- `scorefx-core/target/scorefx-core-1.1.0-SNAPSHOT.jar`
 
 ---
 

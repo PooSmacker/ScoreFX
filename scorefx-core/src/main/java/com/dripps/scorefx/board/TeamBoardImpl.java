@@ -5,7 +5,10 @@ import com.dripps.scorefx.api.animation.Animation;
 import com.dripps.scorefx.hook.PAPIHook;
 import com.dripps.scorefx.scheduler.Heartbeat;
 import com.dripps.scorefx.scheduler.UpdateTask;
+import com.dripps.scorefx.util.ComponentLineSplitter;
+import com.dripps.scorefx.util.LegacySupport;
 import com.dripps.scorefx.util.LineSplitter;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.DisplaySlot;
@@ -29,8 +32,15 @@ import java.util.Map;
  * </ul>
  * </p>
  * <p>
+ * <strong>Adventure-First Architecture (v1.1.0+):</strong> Internally, all text is processed
+ * as Adventure Components. Legacy String-based methods are converted to Components via
+ * {@link LegacySupport} at the API boundary.
+ * </p>
+ * <p>
  * <strong>Thread Safety:</strong> All methods that modify state must be called from the main thread.
  * </p>
+ *
+ * @since 1.0
  */
 public final class TeamBoardImpl implements Board {
     
@@ -74,9 +84,10 @@ public final class TeamBoardImpl implements Board {
         // Create the objective for the sidebar
         this.objective = scoreboard.registerNewObjective(
             OBJECTIVE_NAME,
-            "dummy",
-            net.kyori.adventure.text.Component.text("") // Empty title initially
+            "dummy"
         );
+        this.objective.displayName(Component.empty());
+
         this.objective.setDisplaySlot(DisplaySlot.SIDEBAR);
         
         // Pre-create all 16 teams (for lines 0-15, where 0 is unused but reserved)
@@ -113,6 +124,24 @@ public final class TeamBoardImpl implements Board {
     }
     
     @Override
+    public void setTitle(@NotNull Component title) {
+        checkMainThread();
+        
+        if (title == null) {
+            throw new IllegalArgumentException("Title cannot be null");
+        }
+        
+        // Cancel any existing title animation
+        cancelTitleAnimation();
+        
+        // Set the title directly using the Component
+        objective.displayName(title);
+        
+        // Note: PlaceholderAPI is not supported for Component-based content
+        // If placeholders are needed, use the legacy String-based method
+    }
+    
+    @Override
     public void setTitle(@NotNull String title) {
         checkMainThread();
         
@@ -123,13 +152,10 @@ public final class TeamBoardImpl implements Board {
         // Cancel any existing title animation
         cancelTitleAnimation();
         
-        // Convert & color codes to § and create component
-        String normalizedTitle = title.replace('&', '§');
-        net.kyori.adventure.text.Component titleComponent = 
-            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
-                .legacySection()
-                .deserialize(normalizedTitle);
+        // Convert legacy String to Component (Adventure-First)
+        Component titleComponent = LegacySupport.toComponent(title);
         
+        // Set the title using the Component method
         objective.displayName(titleComponent);
         
         // If the title contains placeholders, schedule periodic updates
@@ -166,13 +192,56 @@ public final class TeamBoardImpl implements Board {
         
         heartbeat.scheduleTask(task);
         
-        // Immediately show the first frame
-        String firstFrame = titleAnimation.nextFrame();
-        setTitle(firstFrame);
+        // Immediately show the first frame (now returns Component)
+        Component firstFrame = titleAnimation.nextFrame();
+        updateTitleDirect(firstFrame);
         
-        // Re-register the animation since setTitle() cancelled it
+        // Re-register the animation since updateTitleDirect doesn't cancel it
+        // (but we need to ensure it's tracked)
         this.titleAnimation = titleAnimation;
         this.activeAnimations.put(TITLE_ROW, titleAnimation);
+    }
+    
+    @Override
+    public void setLine(int row, @NotNull Component text) {
+        setLine(row, text, 1); // Default to updating every tick
+    }
+    
+    @Override
+    public void setLine(int row, @NotNull Component text, int updateIntervalTicks) {
+        checkMainThread();
+        validateRow(row);
+        
+        if (text == null) {
+            throw new IllegalArgumentException("Text cannot be null");
+        }
+        
+        if (updateIntervalTicks < 1) {
+            throw new IllegalArgumentException("Update interval must be at least 1 tick");
+        }
+        
+        // Cancel any existing animation for this row
+        cancelLineAnimation(row);
+        
+        // Get the team for this row
+        Team team = teams.get(row);
+        if (team == null) {
+            throw new IllegalStateException("Team for row " + row + " not found");
+        }
+        
+        // Split the Component into prefix and suffix using ComponentLineSplitter
+        ComponentLineSplitter.SplitResult split = ComponentLineSplitter.split(text);
+        
+        // Update the team's prefix and suffix (flicker-free!) using Component API
+        team.prefix(split.prefix());
+        team.suffix(split.suffix());
+        
+        // Set the score to make this line visible at the correct position
+        String entry = entries.get(row);
+        objective.getScore(entry).setScore(row);
+        
+        // Note: PlaceholderAPI is not supported for Component-based content
+        // If placeholders are needed, use the legacy String-based method
     }
     
     @Override
@@ -196,22 +265,21 @@ public final class TeamBoardImpl implements Board {
         // Cancel any existing animation for this row
         cancelLineAnimation(row);
         
+        // Convert legacy String to Component (Adventure-First)
+        Component textComponent = LegacySupport.toComponent(text);
+        
         // Get the team for this row
         Team team = teams.get(row);
         if (team == null) {
             throw new IllegalStateException("Team for row " + row + " not found");
         }
         
-        // Split the text into prefix and suffix
-        LineSplitter.SplitResult split = LineSplitter.split(text);
+        // Split the Component into prefix and suffix
+        ComponentLineSplitter.SplitResult split = ComponentLineSplitter.split(textComponent);
         
         // Update the team's prefix and suffix (flicker-free!)
-        team.prefix(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
-            .legacySection()
-            .deserialize(split.prefix()));
-        team.suffix(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
-            .legacySection()
-            .deserialize(split.suffix()));
+        team.prefix(split.prefix());
+        team.suffix(split.suffix());
         
         // Set the score to make this line visible at the correct position
         String entry = entries.get(row);
@@ -251,11 +319,11 @@ public final class TeamBoardImpl implements Board {
         
         heartbeat.scheduleTask(task);
         
-        // Immediately show the first frame
-        String firstFrame = animation.nextFrame();
-        setLine(row, firstFrame);
+        // Immediately show the first frame (now returns Component)
+        Component firstFrame = animation.nextFrame();
+        updateLineDirect(row, firstFrame);
         
-        // Re-register the animation since setLine() cancelled it
+        // Re-register the animation since updateLineDirect doesn't cancel it
         activeAnimations.put(row, animation);
     }
     
@@ -347,41 +415,41 @@ public final class TeamBoardImpl implements Board {
      *
      * @param text the text to display
      */
-    public void updateTitleDirect(@NotNull String text) {
-        String normalizedTitle = text.replace('&', '§');
-        net.kyori.adventure.text.Component titleComponent = 
-            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
-                .legacySection()
-                .deserialize(normalizedTitle);
-        
-        objective.displayName(titleComponent);
+    /**
+     * Updates the title to display the given Component directly (bypassing setTitle to avoid canceling animations).
+     * <p>
+     * This is an internal method used by the Heartbeat to update animated titles and scheduled title updates.
+     * </p>
+     *
+     * @param component the Component to display as the title
+     * @since 1.1.0 (changed from String to Component)
+     */
+    public void updateTitleDirect(@NotNull Component component) {
+        objective.displayName(component);
     }
     
     /**
-     * Updates a line to display the given text directly (bypassing setLine to avoid canceling animations).
+     * Updates a line to display the given Component directly (bypassing setLine to avoid canceling animations).
      * <p>
-     * This is an internal method used by the Heartbeat to update animated lines.
+     * This is an internal method used by the Heartbeat to update animated lines and scheduled line updates.
      * </p>
      *
      * @param row the row number
-     * @param text the text to display
+     * @param component the Component to display
+     * @since 1.1.0 (changed from String to Component)
      */
-    public void updateLineDirect(int row, @NotNull String text) {
+    public void updateLineDirect(int row, @NotNull Component component) {
         Team team = teams.get(row);
         if (team == null) {
             return;
         }
         
-        // Split the text into prefix and suffix
-        LineSplitter.SplitResult split = LineSplitter.split(text);
+        // Split the Component into prefix and suffix using ComponentLineSplitter
+        ComponentLineSplitter.SplitResult split = ComponentLineSplitter.split(component);
         
-        // Update the team's prefix and suffix
-        team.prefix(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
-            .legacySection()
-            .deserialize(split.prefix()));
-        team.suffix(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
-            .legacySection()
-            .deserialize(split.suffix()));
+        // Update the team's prefix and suffix using Component API
+        team.prefix(split.prefix());
+        team.suffix(split.suffix());
         
         // Ensure the score is set (in case this is the first update)
         String entry = entries.get(row);
