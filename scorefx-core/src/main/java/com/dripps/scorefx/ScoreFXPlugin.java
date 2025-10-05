@@ -18,7 +18,7 @@ import org.bukkit.plugin.java.JavaPlugin;
  * registration of the API service, and cleanup of resources on shutdown.
  * </p>
  * <p>
- * <strong>Initialization Order:</strong>
+ * <strong>Initialization Order (v2.0.0):</strong>
  * <ol>
  *   <li>Create PlaceholderAPI hook</li>
  *   <li>Create Heartbeat scheduler with PAPI hook</li>
@@ -40,7 +40,7 @@ import org.bukkit.plugin.java.JavaPlugin;
  * </p>
  *
  * @author ScoreFX
- * @version 1.0-SNAPSHOT
+ * @version 2.0.0-SNAPSHOT
  */
 public final class ScoreFXPlugin extends JavaPlugin {
     
@@ -54,8 +54,8 @@ public final class ScoreFXPlugin extends JavaPlugin {
     public void onEnable() {
         // Plugin startup logic
         getLogger().info("┌─────────────────────────────────────┐");
-        getLogger().info("│         ScoreFX v1.0-SNAPSHOT      │");
-        getLogger().info("│   High-Performance Scoreboard API   │");
+        getLogger().info("│         ScoreFX v2.0.0-SNAPSHOT    │");
+        getLogger().info("│   Dependency-Free Scoreboard API    │");
         getLogger().info("└─────────────────────────────────────┘");
         
         getLogger().info("Initializing ScoreFX...");

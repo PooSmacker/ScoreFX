@@ -4,6 +4,7 @@ import com.dripps.scorefx.api.animation.Animation;
 import net.kyori.adventure.text.Component;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Represents a single, per-player scoreboard.
@@ -238,6 +239,128 @@ public interface Board {
      */
     @Deprecated(since = "1.1.0", forRemoval = false)
     void setAnimatedLine(int row, @NotNull Animation animation);
+    
+    /**
+     * Sets the custom score display for a specific row on the scoreboard.
+     * <p>
+     * <strong>Requires ProtocolLib:</strong> This feature is only available when ProtocolLib is installed.
+     * Without ProtocolLib, the default integer scores (1-15) will be displayed instead.
+     * </p>
+     * <p>
+     * <strong>Default Behavior (v1.2.0+):</strong> If ProtocolLib is installed, all scores are hidden
+     * by default, providing a cleaner, more modern appearance. Use this method to show custom content
+     * in the score slot.
+     * </p>
+     * <p>
+     * This method provides granular, per-line control over what appears in the score slot (the right
+     * side of the scoreboard entry). You can use this to display custom numbers, icons, status indicators,
+     * or any other Component-based content.
+     * </p>
+     * <p>
+     * Example usage:
+     * <pre>{@code
+     * // Hide the score (default behavior)
+     * board.setLineScore(5, null);
+     * board.setLineScore(5, Component.empty());
+     * 
+     * // Show a custom score
+     * board.setLineScore(5, Component.text("⭐", NamedTextColor.GOLD));
+     * board.setLineScore(5, Component.text("999", TextColor.color(0xFF5733)));
+     * board.setLineScore(5, Component.text("●", NamedTextColor.GREEN)); // Status indicator
+     * }</pre>
+     * </p>
+     * <p>
+     * <strong>Score Hiding:</strong> Pass {@code null} or {@link Component#empty()} to hide the score.
+     * This is useful for creating clean, text-only scoreboard lines.
+     * </p>
+     * <p>
+     * <strong>Note:</strong> The score slot has limited space. Keep your custom scores short (typically
+     * 1-3 characters) for best visual results.
+     * </p>
+     *
+     * @param row the row number (1-15), must be within valid range
+     * @param score the component to display in the score slot, or null/empty to hide
+     * @throws IllegalArgumentException if row is not between 1 and 15
+     * @throws IllegalStateException if called from a non-main thread
+     * @since 1.2.0
+     */
+    void setLineScore(int row, @Nullable Component score);
+    
+    /**
+     * Sets both the line text and custom score display in a single call using Adventure Components.
+     * <p>
+     * This is a convenience method that combines {@link #setLine(int, Component)} and
+     * {@link #setLineScore(int, Component)} into a single operation.
+     * </p>
+     * <p>
+     * <strong>Requires ProtocolLib:</strong> The custom score feature is only available when ProtocolLib
+     * is installed. Without ProtocolLib, the default integer scores (1-15) will be displayed instead.
+     * </p>
+     * <p>
+     * Example usage:
+     * <pre>{@code
+     * // Line with hidden score
+     * board.setLine(5, Component.text("Players Online", NamedTextColor.YELLOW), null);
+     * 
+     * // Line with custom score
+     * board.setLine(5, 
+     *     Component.text("Health", NamedTextColor.RED),
+     *     Component.text("❤", NamedTextColor.DARK_RED)
+     * );
+     * 
+     * // Line with RGB colors and custom icon
+     * board.setLine(5,
+     *     Component.text("Level", TextColor.color(0x00FF00)),
+     *     Component.text("⭐", NamedTextColor.GOLD)
+     * );
+     * }</pre>
+     * </p>
+     *
+     * @param row the row number (1-15), must be within valid range
+     * @param text the component to display as the line content, must not be null
+     * @param score the component to display in the score slot, or null/empty to hide
+     * @throws IllegalArgumentException if row is not between 1 and 15
+     * @throws IllegalStateException if called from a non-main thread
+     * @since 1.2.0
+     */
+    void setLine(int row, @NotNull Component text, @Nullable Component score);
+    
+    /**
+     * Sets both the line text and custom score display in a single call using legacy String formatting.
+     * <p>
+     * This is a convenience method for backward compatibility that combines setting line content
+     * and custom score display. Both String parameters support Minecraft color codes (§ or &amp;),
+     * hex colors via #RRGGBB format, and PlaceholderAPI placeholders if available.
+     * </p>
+     * <p>
+     * <strong>Requires ProtocolLib:</strong> The custom score feature is only available when ProtocolLib
+     * is installed. Without ProtocolLib, the default integer scores (1-15) will be displayed instead.
+     * </p>
+     * <p>
+     * Example usage:
+     * <pre>{@code
+     * // Line with hidden score
+     * board.setLine(5, "&eOnline Players: &f%server_online%", null);
+     * 
+     * // Line with custom score
+     * board.setLine(5, "&cHealth: &f%player_health%", "&4❤");
+     * 
+     * // Line with hex colors
+     * board.setLine(5, "&#00FF00Level", "&#FFD700⭐");
+     * }</pre>
+     * </p>
+     *
+     * @param row the row number (1-15), must be within valid range
+     * @param text the text to display as the line content, must not be null
+     * @param score the text to display in the score slot, or null to hide
+     * @throws IllegalArgumentException if row is not between 1 and 15
+     * @throws IllegalStateException if called from a non-main thread
+     * @deprecated As of 1.2.0, use {@link #setLine(int, Component, Component)} for full Adventure support.
+     *             This method remains fully functional for backward compatibility.
+     * @since 1.2.0
+     */
+    @Deprecated(since = "1.2.0", forRemoval = false)
+    void setLine(int row, @NotNull String text, @Nullable String score);
     
     /**
      * Clears a line from the scoreboard.

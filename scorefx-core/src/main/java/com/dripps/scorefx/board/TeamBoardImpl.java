@@ -8,6 +8,7 @@ import com.dripps.scorefx.scheduler.UpdateTask;
 import com.dripps.scorefx.util.ComponentLineSplitter;
 import com.dripps.scorefx.util.LegacySupport;
 import com.dripps.scorefx.util.LineSplitter;
+import com.dripps.scorefx.util.PacketHelper;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -20,6 +21,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Implementation of the {@link Board} interface using the Team-based rendering approach.
@@ -43,9 +46,9 @@ import java.util.Map;
  * @since 1.0
  */
 public final class TeamBoardImpl implements Board {
-    
+
     private static final int MAX_LINES = 15;
-    private static final String OBJECTIVE_NAME = "scorefx_board";
+    public static final String OBJECTIVE_NAME = "scorefx_board";
     private static final String TEAM_PREFIX = "sfx_line_";
     private static final int TITLE_ROW = -1; // Special row number for title
     
@@ -59,6 +62,9 @@ public final class TeamBoardImpl implements Board {
     // Animation tracking
     private final Map<Integer, Animation> activeAnimations; // row -> animation (or TITLE_ROW for title)
     private Animation titleAnimation;
+    
+    // Custom score tracking (v1.2.0)
+    private final Map<Integer, Component> customScores; // row -> custom score component
     
     /**
      * Creates a new TeamBoardImpl for the specified player.
@@ -77,6 +83,7 @@ public final class TeamBoardImpl implements Board {
         this.entries = new HashMap<>();
         this.activeAnimations = new HashMap<>();
         this.titleAnimation = null;
+        this.customScores = new ConcurrentHashMap<>();
         
         // Create a new scoreboard for this player
         this.scoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
@@ -236,9 +243,10 @@ public final class TeamBoardImpl implements Board {
         team.prefix(split.prefix());
         team.suffix(split.suffix());
         
-        // Set the score to make this line visible at the correct position
+        // Send the score packet directly using PacketHelper (v2.0)
         String entry = entries.get(row);
-        objective.getScore(entry).setScore(row);
+        Component customScore = customScores.get(row); // null = hidden score (default)
+        PacketHelper.sendScorePacket(player, OBJECTIVE_NAME, entry, row, customScore);
         
         // Note: PlaceholderAPI is not supported for Component-based content
         // If placeholders are needed, use the legacy String-based method
@@ -281,9 +289,10 @@ public final class TeamBoardImpl implements Board {
         team.prefix(split.prefix());
         team.suffix(split.suffix());
         
-        // Set the score to make this line visible at the correct position
+        // Send the score packet directly using PacketHelper (v2.0)
         String entry = entries.get(row);
-        objective.getScore(entry).setScore(row);
+        Component customScore = customScores.get(row); // null = hidden score (default)
+        PacketHelper.sendScorePacket(player, OBJECTIVE_NAME, entry, row, customScore);
         
         // If the text contains placeholders, schedule periodic updates
         if (PAPIHook.hasPlaceholders(text)) {
@@ -335,9 +344,12 @@ public final class TeamBoardImpl implements Board {
         // Cancel any animation for this row
         cancelLineAnimation(row);
         
-        // Reset the score to remove this line from display
+        // Remove custom score tracking
+        customScores.remove(row);
+        
+        // Send remove packet using PacketHelper (v2.0)
         String entry = entries.get(row);
-        scoreboard.resetScores(entry);
+        PacketHelper.sendRemoveScorePacket(player, OBJECTIVE_NAME, entry);
         
         // Clear the team's prefix and suffix
         Team team = teams.get(row);
@@ -451,9 +463,10 @@ public final class TeamBoardImpl implements Board {
         team.prefix(split.prefix());
         team.suffix(split.suffix());
         
-        // Ensure the score is set (in case this is the first update)
+        // Send the score packet directly using PacketHelper (v2.0)
         String entry = entries.get(row);
-        objective.getScore(entry).setScore(row);
+        Component customScore = customScores.get(row); // null = hidden score (default)
+        PacketHelper.sendScorePacket(player, OBJECTIVE_NAME, entry, row, customScore);
     }
     
     /**
@@ -559,5 +572,63 @@ public final class TeamBoardImpl implements Board {
                 "Current thread: " + Thread.currentThread().getName()
             );
         }
+    }
+    
+    // ==================== Custom Score API (v1.2.0 / v2.0.0) ====================
+    
+    @Override
+    public void setLineScore(int row, @Nullable Component score) {
+        checkMainThread();
+        validateRow(row);
+        
+        if (score == null || score.equals(Component.empty())) {
+            // Remove custom score (revert to hidden)
+            customScores.remove(row);
+        } else {
+            // Set custom score
+            customScores.put(row, score);
+        }
+        
+        // Immediately send updated packet with new score format (v2.0)
+        String entry = entries.get(row);
+        int displayScore = row; // The numeric score value (row number for positioning)
+        PacketHelper.sendScorePacket(player, OBJECTIVE_NAME, entry, displayScore, score);
+    }
+    
+    @Override
+    public void setLine(int row, @NotNull Component text, @Nullable Component score) {
+        // Delegate to existing setLine for text
+        setLine(row, text);
+        
+        // Set the custom score
+        setLineScore(row, score);
+    }
+    
+    @Deprecated(since = "1.2.0", forRemoval = false)
+    @Override
+    public void setLine(int row, @NotNull String text, @Nullable String score) {
+        // Convert both parameters to Components
+        Component textComponent = LegacySupport.toComponent(text);
+        Component scoreComponent = (score != null) ? LegacySupport.toComponent(score) : null;
+        
+        // Delegate to Component-based method
+        setLine(row, textComponent, scoreComponent);
+    }
+    
+    /**
+     * Retrieves the custom score component for a specific row.
+     * <p>
+     * This method is used internally to determine what custom score format to
+     * display in the score slot for each line. Returns empty Optional if no
+     * custom score is set (defaults to hidden/BLANK format).
+     * </p>
+     *
+     * @param row the row number (1-15)
+     * @return an Optional containing the custom score Component, or empty if no custom score is set
+     * @since 1.2.0
+     */
+    @NotNull
+    public Optional<Component> getCustomScore(int row) {
+        return Optional.ofNullable(customScores.get(row));
     }
 }
