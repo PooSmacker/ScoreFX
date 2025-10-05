@@ -64,7 +64,7 @@ dependencyResolutionManagement {
 Gradle (build.gradle)
 ```gradle
 dependencies {
-    compileOnly 'com.github.PooSmacker.ScoreFX:scorefx-api:v1.1.0'
+    compileOnly 'com.github.PooSmacker.ScoreFX:scorefx-api:v2.0.0'
 }
 ```
 
