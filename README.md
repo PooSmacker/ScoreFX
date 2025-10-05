@@ -45,7 +45,7 @@ Maven (pom.xml)
 <dependency>
   <groupId>com.github.PooSmacker.ScoreFX</groupId>
   <artifactId>scorefx-api</artifactId>
-  <version>v1.1.0</version>
+  <version>v2.0.0</version>
   <scope>provided</scope>
 </dependency>
 ```
