@@ -40,8 +40,8 @@ public final class AnimationFactoryImpl implements AnimationFactory {
         if (frames.isEmpty()) {
             throw new IllegalArgumentException("Frames list cannot be empty");
         }
-        if (intervalTicks < 1) {
-            throw new IllegalArgumentException("Interval ticks must be at least 1, got: " + intervalTicks);
+        if (intervalTicks < 10) {
+            throw new IllegalArgumentException("Interval ticks must be at least 10, got: " + intervalTicks);
         }
         
         return new SimpleAnimation(frames, intervalTicks);
@@ -56,8 +56,8 @@ public final class AnimationFactoryImpl implements AnimationFactory {
         if (frames.isEmpty()) {
             throw new IllegalArgumentException("Frames list cannot be empty");
         }
-        if (intervalTicks < 1) {
-            throw new IllegalArgumentException("Interval ticks must be at least 1, got: " + intervalTicks);
+        if (intervalTicks < 10) {
+            throw new IllegalArgumentException("Interval ticks must be at least 10, got: " + intervalTicks);
         }
         
         // Convert legacy String frames to Components using LegacySupport
