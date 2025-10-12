@@ -1,5 +1,6 @@
 package com.dripps.scorefx.scheduler;
 
+import com.dripps.scorefx.animation.SharedAnimation;
 import com.dripps.scorefx.board.TeamBoardImpl;
 import com.dripps.scorefx.hook.PAPIHook;
 import com.dripps.scorefx.util.LegacySupport;
@@ -146,6 +147,10 @@ public final class Heartbeat {
      * Tasks are processed in chronological order (earliest first) thanks to the min-heap
      * property of the PriorityQueue. Recurring tasks are automatically rescheduled after execution.
      * </p>
+     * <p>
+     * As of v2.0.1, this method flushes all pending updates to boards at the end of the tick
+     * for improved batching performance.
+     * </p>
      */
     private void tick() {
         currentTick++;
@@ -168,6 +173,11 @@ public final class Heartbeat {
                     tasks.remove(task);
                 }
             }
+        }
+        
+        // v2.0.1: Flush all pending updates to boards (batching optimization)
+        for (TeamBoardImpl board : activeBoardsMap.values()) {
+            board.flushUpdates();
         }
     }
     

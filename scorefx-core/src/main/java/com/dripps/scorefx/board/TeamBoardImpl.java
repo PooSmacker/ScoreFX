@@ -66,6 +66,13 @@ public final class TeamBoardImpl implements Board {
     // Custom score tracking (v1.2.0)
     private final Map<Integer, Component> customScores; // row -> custom score component
     
+    // Batching (v2.0.1) - Queue updates and flush at tick end for better performance
+    private final Map<Integer, Component> pendingLineUpdates; // row -> pending component update
+    private Component pendingTitleUpdate; // null = no pending title update
+    
+    // Visibility tracking (v2.0.1) - Skip updates when board is hidden
+    private boolean visible;
+    
     /**
      * Creates a new TeamBoardImpl for the specified player.
      * <p>
@@ -84,6 +91,9 @@ public final class TeamBoardImpl implements Board {
         this.activeAnimations = new HashMap<>();
         this.titleAnimation = null;
         this.customScores = new ConcurrentHashMap<>();
+        this.pendingLineUpdates = new HashMap<>();
+        this.pendingTitleUpdate = null;
+        this.visible = true; // Visible by default
         
         // Create a new scoreboard for this player
         this.scoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
@@ -185,6 +195,11 @@ public final class TeamBoardImpl implements Board {
         // Store the animation
         this.titleAnimation = titleAnimation;
         this.activeAnimations.put(TITLE_ROW, titleAnimation);
+        
+        // v2.0.1: Track reference for SharedAnimation
+        if (titleAnimation instanceof com.dripps.scorefx.animation.SharedAnimation sharedAnimation) {
+            sharedAnimation.addReference();
+        }
         
         // Schedule the animation task with the Heartbeat
         UpdateTask task = new UpdateTask(
@@ -315,6 +330,11 @@ public final class TeamBoardImpl implements Board {
         // Store the animation
         activeAnimations.put(row, animation);
         
+        // v2.0.1: Track reference for SharedAnimation
+        if (animation instanceof com.dripps.scorefx.animation.SharedAnimation sharedAnimation) {
+            sharedAnimation.addReference();
+        }
+        
         // Schedule the animation task with the Heartbeat
         UpdateTask task = new UpdateTask(
             UpdateTask.TaskType.LINE_ANIMATION,
@@ -363,6 +383,85 @@ public final class TeamBoardImpl implements Board {
     @Override
     public Player getPlayer() {
         return player;
+    }
+    
+    /**
+     * Flushes all pending updates to the scoreboard.
+     * <p>
+     * This method applies all queued line and title updates in a single batch operation.
+     * This is a critical optimization in v2.0.1 that reduces packet overhead by batching
+     * multiple updates together instead of sending them individually.
+     * </p>
+     * <p>
+     * This method is called by the Heartbeat at the end of each tick after all animation
+     * frames have been calculated.
+     * </p>
+     *
+     * @since 2.0.1
+     */
+    public void flushUpdates() {
+        // Flush pending title update
+        if (pendingTitleUpdate != null) {
+            objective.displayName(pendingTitleUpdate);
+            pendingTitleUpdate = null;
+        }
+        
+        // Flush all pending line updates
+        if (!pendingLineUpdates.isEmpty()) {
+            for (Map.Entry<Integer, Component> entry : pendingLineUpdates.entrySet()) {
+                int row = entry.getKey();
+                Component component = entry.getValue();
+                
+                Team team = teams.get(row);
+                if (team == null) {
+                    continue;
+                }
+                
+                // Split the Component into prefix and suffix using ComponentLineSplitter
+                ComponentLineSplitter.SplitResult split = ComponentLineSplitter.split(component);
+                
+                // Update the team's prefix and suffix using Component API
+                team.prefix(split.prefix());
+                team.suffix(split.suffix());
+                
+                // Send the score packet directly using PacketHelper (v2.0)
+                String entryString = entries.get(row);
+                Component customScore = customScores.get(row); // null = hidden score (default)
+                PacketHelper.sendScorePacket(player, OBJECTIVE_NAME, entryString, row, customScore);
+            }
+            
+            pendingLineUpdates.clear();
+        }
+    }
+    
+    /**
+     * Checks if this board is currently visible to the player.
+     *
+     * @return true if visible, false if hidden
+     * @since 2.0.1
+     */
+    public boolean isVisible() {
+        return visible;
+    }
+    
+    /**
+     * Sets the visibility of this board.
+     * <p>
+     * When a board is hidden, all update operations are skipped to avoid wasteful
+     * packet sends. This is a performance optimization introduced in v2.0.1.
+     * </p>
+     *
+     * @param visible true to show the board, false to hide it
+     * @since 2.0.1
+     */
+    public void setVisible(boolean visible) {
+        this.visible = visible;
+        
+        if (!visible) {
+            // Clear any pending updates when hiding
+            pendingLineUpdates.clear();
+            pendingTitleUpdate = null;
+        }
     }
     
     /**
@@ -431,42 +530,43 @@ public final class TeamBoardImpl implements Board {
      * Updates the title to display the given Component directly (bypassing setTitle to avoid canceling animations).
      * <p>
      * This is an internal method used by the Heartbeat to update animated titles and scheduled title updates.
+     * As of v2.0.1, this queues the update for batching instead of applying immediately.
      * </p>
      *
      * @param component the Component to display as the title
      * @since 1.1.0 (changed from String to Component)
+     * @since 2.0.1 (batching support)
      */
     public void updateTitleDirect(@NotNull Component component) {
-        objective.displayName(component);
+        // v2.0.1: Skip update if board is hidden
+        if (!visible) {
+            return;
+        }
+        
+        // v2.0.1: Queue update for batching instead of applying immediately
+        pendingTitleUpdate = component;
     }
     
     /**
      * Updates a line to display the given Component directly (bypassing setLine to avoid canceling animations).
      * <p>
      * This is an internal method used by the Heartbeat to update animated lines and scheduled line updates.
+     * As of v2.0.1, this queues the update for batching instead of applying immediately.
      * </p>
      *
      * @param row the row number
      * @param component the Component to display
      * @since 1.1.0 (changed from String to Component)
+     * @since 2.0.1 (batching support)
      */
     public void updateLineDirect(int row, @NotNull Component component) {
-        Team team = teams.get(row);
-        if (team == null) {
+        // v2.0.1: Skip update if board is hidden
+        if (!visible) {
             return;
         }
         
-        // Split the Component into prefix and suffix using ComponentLineSplitter
-        ComponentLineSplitter.SplitResult split = ComponentLineSplitter.split(component);
-        
-        // Update the team's prefix and suffix using Component API
-        team.prefix(split.prefix());
-        team.suffix(split.suffix());
-        
-        // Send the score packet directly using PacketHelper (v2.0)
-        String entry = entries.get(row);
-        Component customScore = customScores.get(row); // null = hidden score (default)
-        PacketHelper.sendScorePacket(player, OBJECTIVE_NAME, entry, row, customScore);
+        // v2.0.1: Queue update for batching instead of applying immediately
+        pendingLineUpdates.put(row, component);
     }
     
     /**
@@ -475,6 +575,12 @@ public final class TeamBoardImpl implements Board {
     private void cancelTitleAnimation() {
         if (titleAnimation != null) {
             activeAnimations.remove(TITLE_ROW);
+            
+            // v2.0.1: Release reference for SharedAnimation
+            if (titleAnimation instanceof com.dripps.scorefx.animation.SharedAnimation sharedAnimation) {
+                sharedAnimation.removeReference();
+            }
+            
             titleAnimation = null;
             // Task cancellation is handled by the next animation task or board removal
         }
@@ -486,7 +592,13 @@ public final class TeamBoardImpl implements Board {
      * @param row the row number
      */
     private void cancelLineAnimation(int row) {
-        activeAnimations.remove(row);
+        Animation animation = activeAnimations.remove(row);
+        
+        // v2.0.1: Release reference for SharedAnimation
+        if (animation instanceof com.dripps.scorefx.animation.SharedAnimation sharedAnimation) {
+            sharedAnimation.removeReference();
+        }
+        
         // Task cancellation is handled by the next animation task or board removal
     }
     
