@@ -177,7 +177,7 @@ public final class TeamBoardImpl implements Board {
         
         // If the title contains placeholders, schedule periodic updates
         if (PAPIHook.hasPlaceholders(title)) {
-            scheduleRecurringTitleUpdate(title, 1); // Update every tick by default
+            scheduleRecurringTitleUpdate(title, 20); // Update every second by default
         }
     }
     
@@ -226,7 +226,7 @@ public final class TeamBoardImpl implements Board {
     
     @Override
     public void setLine(int row, @NotNull Component text) {
-        setLine(row, text, 1); // Default to updating every tick
+        setLine(row, text, 20); // Default to updating every second
     }
     
     @Override
@@ -269,7 +269,7 @@ public final class TeamBoardImpl implements Board {
     
     @Override
     public void setLine(int row, @NotNull String text) {
-        setLine(row, text, 1); // Default to updating every tick
+        setLine(row, text, 20); // Default to updating every second
     }
     
     @Override
