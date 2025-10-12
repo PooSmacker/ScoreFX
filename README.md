@@ -45,7 +45,7 @@ Maven (pom.xml)
 <dependency>
   <groupId>com.github.PooSmacker.ScoreFX</groupId>
   <artifactId>scorefx-api</artifactId>
-  <version>v1.1.0</version>
+  <version>v2.0.0</version>
   <scope>provided</scope>
 </dependency>
 ```
@@ -64,7 +64,7 @@ dependencyResolutionManagement {
 Gradle (build.gradle)
 ```gradle
 dependencies {
-    compileOnly 'com.github.PooSmacker.ScoreFX:scorefx-api:v1.1.0'
+    compileOnly 'com.github.PooSmacker.ScoreFX:scorefx-api:v2.0.0'
 }
 ```
 
@@ -493,7 +493,7 @@ public void createBreathingAnimation(Player player) {
                   mm.deserialize("<#555555>⬤ <#888888>Active"),
                   mm.deserialize("<#444444>⬤ <#777777>Active")
           ),
-          2 // 2 ticks = buttery smooth
+          2 // 2 ticks = buttery smooth (very bad for performance though)
   );
   board.setAnimatedLine(5, breathing);
 }
