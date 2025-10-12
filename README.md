@@ -6,7 +6,7 @@ A high-performance, dependency-free scoreboard API for Paper servers. Build clea
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/)
 [![Java 21](https://img.shields.io/badge/Java-21-orange.svg)](https://openjdk.java.net/projects/jdk/21/)
 [![Paper 1.21](https://img.shields.io/badge/Paper-1.21.8-blue.svg)](https://papermc.io/)
-[![Version](https://img.shields.io/badge/Version-2.0.0--SNAPSHOT-green.svg)]()
+[![Version](https://img.shields.io/badge/Version-2.0.1--SNAPSHOT-green.svg)]()
 
 ## Features
 
@@ -23,7 +23,7 @@ A high-performance, dependency-free scoreboard API for Paper servers. Build clea
 
 Download the prebuilt jar from releases if you're a server owner and a plugin requires it.
 
--  Download `scorefx-core-2.0.0-SNAPSHOT.jar` from [Releases](https://github.com/PooSmacker/ScoreFX/releases)
+-  Download `scorefx-core-2.0.1-SNAPSHOT.jar` from [Releases](https://github.com/PooSmacker/ScoreFX/releases)
 
 -  Place it in your server's `plugins/` folder
 
@@ -45,7 +45,7 @@ Maven (pom.xml)
 <dependency>
   <groupId>com.github.PooSmacker.ScoreFX</groupId>
   <artifactId>scorefx-api</artifactId>
-  <version>v2.0.0</version>
+  <version>v2.0.1</version>
   <scope>provided</scope>
 </dependency>
 ```
@@ -64,7 +64,7 @@ dependencyResolutionManagement {
 Gradle (build.gradle)
 ```gradle
 dependencies {
-    compileOnly 'com.github.PooSmacker.ScoreFX:scorefx-api:v2.0.0'
+    compileOnly 'com.github.PooSmacker.ScoreFX:scorefx-api:v2.0.1'
 }
 ```
 
@@ -965,4 +965,4 @@ scorefx.getBoardManager().getBoard(player).ifPresent(board -> {
 
 - Message me on discord at `dripps.`
 
-**ScoreFX v2.0.0** - Dependency-Free Scoreboard API
+**ScoreFX v2.0.1** - Dependency-Free Scoreboard API
