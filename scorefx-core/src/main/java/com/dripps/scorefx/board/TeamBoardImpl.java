@@ -167,7 +167,7 @@ public final class TeamBoardImpl implements Board {
         
         // If the title contains placeholders, schedule periodic updates
         if (PAPIHook.hasPlaceholders(title)) {
-            scheduleRecurringTitleUpdate(title, 1); // Update every tick by default
+            scheduleRecurringTitleUpdate(title, 20); // Update every second
         }
     }
     
@@ -211,7 +211,7 @@ public final class TeamBoardImpl implements Board {
     
     @Override
     public void setLine(int row, @NotNull Component text) {
-        setLine(row, text, 1); // Default to updating every tick
+        setLine(row, text, 20); // Update every second
     }
     
     @Override
@@ -254,7 +254,7 @@ public final class TeamBoardImpl implements Board {
     
     @Override
     public void setLine(int row, @NotNull String text) {
-        setLine(row, text, 1); // Default to updating every tick
+        setLine(row, text, 20); // Update every second
     }
     
     @Override
@@ -419,14 +419,6 @@ public final class TeamBoardImpl implements Board {
         return activeAnimations.get(row);
     }
     
-    /**
-     * Updates the title to display the given text directly (bypassing setTitle to avoid canceling animations).
-     * <p>
-     * This is an internal method used by the Heartbeat to update animated titles.
-     * </p>
-     *
-     * @param text the text to display
-     */
     /**
      * Updates the title to display the given Component directly (bypassing setTitle to avoid canceling animations).
      * <p>
