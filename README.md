@@ -493,7 +493,7 @@ public void createBreathingAnimation(Player player) {
                   mm.deserialize("<#555555>⬤ <#888888>Active"),
                   mm.deserialize("<#444444>⬤ <#777777>Active")
           ),
-          2 // 2 ticks = buttery smooth
+          2 // 2 ticks = buttery smooth (very bad for performance though)
   );
   board.setAnimatedLine(5, breathing);
 }
