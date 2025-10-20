@@ -243,13 +243,13 @@ public interface Board {
     /**
      * Sets the custom score display for a specific row on the scoreboard.
      * <p>
-     * <strong>Requires ProtocolLib:</strong> This feature is only available when ProtocolLib is installed.
-     * Without ProtocolLib, the default integer scores (1-15) will be displayed instead.
+     * <strong>Zero Dependencies:</strong> This feature uses direct NMS packet manipulation and requires
+     * no external libraries. ScoreFX handles all scoreboard operations internally through optimized
+     * reflection-based packet sending.
      * </p>
      * <p>
-     * <strong>Default Behavior (v1.2.0+):</strong> If ProtocolLib is installed, all scores are hidden
-     * by default, providing a cleaner, more modern appearance. Use this method to show custom content
-     * in the score slot.
+     * <strong>Default Behavior (v1.2.0+):</strong> All scores are hidden by default, providing a cleaner,
+     * more modern appearance. Use this method to show custom content in the score slot.
      * </p>
      * <p>
      * This method provides granular, per-line control over what appears in the score slot (the right
@@ -293,8 +293,9 @@ public interface Board {
      * {@link #setLineScore(int, Component)} into a single operation.
      * </p>
      * <p>
-     * <strong>Requires ProtocolLib:</strong> The custom score feature is only available when ProtocolLib
-     * is installed. Without ProtocolLib, the default integer scores (1-15) will be displayed instead.
+     * <strong>Zero Dependencies:</strong> This feature uses direct NMS packet manipulation and requires
+     * no external libraries. ScoreFX handles all scoreboard operations internally through optimized
+     * reflection-based packet sending.
      * </p>
      * <p>
      * Example usage:
@@ -333,8 +334,9 @@ public interface Board {
      * hex colors via #RRGGBB format, and PlaceholderAPI placeholders if available.
      * </p>
      * <p>
-     * <strong>Requires ProtocolLib:</strong> The custom score feature is only available when ProtocolLib
-     * is installed. Without ProtocolLib, the default integer scores (1-15) will be displayed instead.
+     * <strong>Zero Dependencies:</strong> This feature uses direct NMS packet manipulation and requires
+     * no external libraries. ScoreFX handles all scoreboard operations internally through optimized
+     * reflection-based packet sending.
      * </p>
      * <p>
      * Example usage:
